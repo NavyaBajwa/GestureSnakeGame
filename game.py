@@ -17,6 +17,9 @@ TILE_SIZE = 25
 WINDOW_WIDTH = TILE_SIZE*COLUMNS
 WINDOW_HEIGHT = TILE_SIZE*ROWS
 
+STEP_DELAY = 150
+
+last_move_time = pygame.time.get_ticks()
 
 # create the pygame window: need width and height
 (width, height) = (WINDOW_WIDTH, WINDOW_HEIGHT) 
@@ -27,11 +30,15 @@ background = (245, 250, 195)
 
 # set up initial snake
 snake = Tile(5*TILE_SIZE, 5*TILE_SIZE)
-vel = 8 # specify speed
+food = Tile(10*TILE_SIZE, 10*TILE_SIZE)
+velocityX = 0
+velocityY = 0
+
 
 # Draw initial frame
 screen.fill(background)
-pygame.draw.rect(screen, (255, 0, 0), (snake.x, snake.y, TILE_SIZE, TILE_SIZE))
+#pygame.draw.rect(screen, (110, 86, 245), (snake.x, snake.y, TILE_SIZE, TILE_SIZE)) # draw snake
+#pygame.draw.rect(screen, (245, 0, 0), (food.x, food.y, TILE_SIZE, TILE_SIZE)) # draw food
 pygame.display.flip()
 
 # create tracker object
@@ -46,7 +53,7 @@ running = True
 waitingToStart = True
 
 def update_game():
-    global running, waitingToStart, snake
+    global running, waitingToStart, snake, velocityY, velocityX, last_move_time
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -66,18 +73,37 @@ def update_game():
             waitingToStart = False
         return True
 
-    #keys = pygame.key.get_pressed()
-    if gesture == "LEFT" and (snake.x > 0):
-        snake.x -= vel
-    if gesture == "RIGHT" and (snake.x < 500 - TILE_SIZE):
-        snake.x += vel
-    if gesture == "UP" and (snake.y > 0):
-        snake.y -= vel
-    if gesture == "DOWN" and (snake.y < 500 - TILE_SIZE):
-        snake.y += vel
+    # Update velocity based on gesture (don't check boundaries here)
+    if gesture == "LEFT" and velocityX != 1:  # Can't go left if moving right
+        velocityX = -1
+        velocityY = 0
+    if gesture == "RIGHT" and velocityX != -1:  # Can't go right if moving left
+        velocityX = 1
+        velocityY = 0
+    if gesture == "UP" and velocityY != 1:  # Can't go up if moving down
+        velocityX = 0
+        velocityY = -1
+    if gesture == "DOWN" and velocityY != -1:  # Can't go down if moving up
+        velocityX = 0
+        velocityY = 1
+
+    # Move the snake at regular intervals
+    current_time = pygame.time.get_ticks()
+    if current_time - last_move_time > STEP_DELAY:
+        # Calculate new position
+        new_x = snake.x + velocityX * TILE_SIZE
+        new_y = snake.y + velocityY * TILE_SIZE
+        
+        # Check boundaries before moving
+        if 0 <= new_x < 500 and 0 <= new_y < 500:
+            snake.x = new_x
+            snake.y = new_y
+        
+        last_move_time = current_time
 
     screen.fill(background)
-    pygame.draw.rect(screen, (255, 0, 0), (snake.x, snake.y, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, (245, 0, 0), (food.x, food.y, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, (110, 86, 245), (snake.x, snake.y, TILE_SIZE, TILE_SIZE))
     
     pos_text = font.render(f"X: {snake.x}  Y: {snake.y}", True, (255, 0, 255))
     screen.blit(pos_text, (10, 10))
