@@ -37,7 +37,7 @@ snake_body = [] # lots of Tile objects
 food = Tile(10*TILE_SIZE, 10*TILE_SIZE)
 velocityX = 0
 velocityY = 0
-
+game_over = False
 score = 0
 
 
@@ -58,8 +58,21 @@ tracker.start()
 running = True
 waitingToStart = True
 
+def reset_game():
+    global snake, snake_body, food, velocityX, velocityY, score, game_over, waitingToStart, last_move_time
+    
+    snake = Tile(TILE_SIZE * 5, TILE_SIZE * 5, (137, 134, 213))
+    snake_body = []
+    food = Tile(TILE_SIZE * 10, TILE_SIZE * 10, (30, 30, 36))
+    velocityX = 0
+    velocityY = 0
+    score = 0
+    game_over = False
+    waitingToStart = True
+    last_move_time = pygame.time.get_ticks()
+
 def update_game():
-    global running, waitingToStart, snake, velocityY, velocityX, last_move_time, snake_body, score
+    global running, waitingToStart, snake, velocityY, velocityX, last_move_time, snake_body, score, game_over
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -68,11 +81,31 @@ def update_game():
 
     gesture = tracker.get_gesture()
 
+    # handle game over state
+    if game_over:
+        screen.fill(background)
+        
+        game_over_text = font.render("Game Over!", True, (30, 30, 36))
+        screen.blit(game_over_text, (270, 230))
+        
+        final_score_text = font.render(f"Your final score was: {score}", True, (30, 30, 36))
+        screen.blit(final_score_text, (230, 270))
+        
+        replay_text = font.render("Show an open hand to replay!", True, (30, 30, 36))
+        screen.blit(replay_text, (210, 310))
+        
+        pygame.display.update()
+        
+        if gesture == "OPEN_HAND":
+            reset_game()
+        
+        return True
+
     if waitingToStart:
         screen.fill(background)
 
-        text = font.render("Show open hand to start!", True, (0, 0, 0))
-        screen.blit(text, (120, 220))
+        text = font.render("Show an open hand to start!", True, (30, 30, 36))
+        screen.blit(text, (215, 270))
         pygame.display.update()
 
         if gesture == "OPEN_HAND":
@@ -83,13 +116,13 @@ def update_game():
     if gesture == "LEFT" and velocityX != 1:  # Can't go left if moving right
         velocityX = -1
         velocityY = 0
-    if gesture == "RIGHT" and velocityX != -1:  # Can't go right if moving left
+    elif gesture == "RIGHT" and velocityX != -1:  # Can't go right if moving left
         velocityX = 1
         velocityY = 0
-    if gesture == "UP" and velocityY != 1:  # Can't go up if moving down
+    elif gesture == "UP" and velocityY != 1:  # Can't go up if moving down
         velocityX = 0
         velocityY = -1
-    if gesture == "DOWN" and velocityY != -1:  # Can't go down if moving up
+    elif gesture == "DOWN" and velocityY != -1:  # Can't go down if moving up
         velocityX = 0
         velocityY = 1
 
@@ -103,11 +136,19 @@ def update_game():
         # Calculate new position
         new_x = snake.x + velocityX * TILE_SIZE
         new_y = snake.y + velocityY * TILE_SIZE
+
+        # Move the snake
+        snake.x = new_x
+        snake.y = new_y
+
+        if (snake.x < 0 or snake.x >= WINDOW_WIDTH or snake.y < 0 or snake.y >= WINDOW_HEIGHT):
+            game_over = True
+            return True
         
-        # Check boundaries before moving
-        if 0 <= new_x < WINDOW_WIDTH and 0 <= new_y < WINDOW_HEIGHT:
-            snake.x = new_x
-            snake.y = new_y
+        for tile in snake_body:
+            if snake.x == tile.x and snake.y == tile.y:
+                game_over = True
+                return True
 
         # update body
         px, py = prev_x, prev_y
@@ -128,28 +169,28 @@ def update_game():
 
 
     screen.fill(background)
-    pygame.draw.rect(screen, (30, 30, 36), (food.x, food.y, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, (246, 142, 95), (food.x, food.y, TILE_SIZE, TILE_SIZE))
     
-    pygame.draw.rect(screen, (137, 134, 213), (snake.x, snake.y, TILE_SIZE, TILE_SIZE))
-    pygame.draw.rect(screen, (0, 0, 0), (snake.x, snake.y, TILE_SIZE, TILE_SIZE), 2)  # Black border
+    pygame.draw.rect(screen, (223, 175, 233), (snake.x, snake.y, TILE_SIZE, TILE_SIZE))
+    pygame.draw.rect(screen, (0, 0, 0), (snake.x, snake.y, TILE_SIZE, TILE_SIZE), 1)  # Black border
 
     for tile in snake_body:
         pygame.draw.rect(screen, (137, 134, 213), (tile.x, tile.y, TILE_SIZE, TILE_SIZE))
         pygame.draw.rect(screen, (0, 0, 0), (tile.x, tile.y, TILE_SIZE, TILE_SIZE), 1) 
     
-    pos_text = font.render(f"X: {snake.x}  Y: {snake.y}", True, (255, 0, 255))
-    screen.blit(pos_text, (10, 10))
+    #pos_text = font.render(f"X: {snake.x}  Y: {snake.y}", True, (255, 0, 255))
+    #screen.blit(pos_text, (10, 10))
 
-    gesture_text = font.render(f"Gesture: {gesture}", True, (255, 0, 255))
-    screen.blit(gesture_text, (10, 40))
+    gesture_text = font.render(f"Gesture: {gesture}", True, (39, 41, 50))
+    screen.blit(gesture_text, (10, 10))
 
-    score_text = font.render(f"Score: {score}", True, (255, 0, 255))
-    screen.blit(score_text, (10,70))
+    score_text = font.render(f"Score: {score}", True, (39, 41, 50))
+    screen.blit(score_text, (10,40))
     
     pygame.display.flip()
     return running
 
-# Run camera loop with pygame updates integrated (both on main thread)
+# Run camera loop with pygame updates 
 tracker.camera_loop(update_callback=update_game)
 
 pygame.quit()
