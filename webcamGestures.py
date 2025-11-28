@@ -32,6 +32,40 @@ class HandGestureTracker:
     def get_gesture(self):
         return self.gesture
     
+    def is_hand_open(self, hand):
+        fingerTips = [4, 8, 12, 16, 20]
+        fingerJoints = [3, 6, 10, 14, 18]
+
+        extendedFingers = 0
+
+        for tipID, jointID in zip(fingerTips, fingerJoints):
+            tip = hand.landmark[tipID]
+            pip = hand.landmark[jointID]
+
+            if tip.y < pip.y:
+                extendedFingers += 1
+            
+        return extendedFingers >= 4
+    
+    def gestureClassifier(self, hand):
+        pointerfinger_id = 8
+        pointerknuckle_id = 6
+
+        tipY = hand.landmark[pointerfinger_id].y
+        tipX = hand.landmark[pointerfinger_id].x
+        knuckleY = hand.landmark[pointerknuckle_id].y
+        knuckleX = hand.landmark[pointerknuckle_id].x
+
+        dx = abs(tipX - knuckleX)
+        dy = abs(tipY - knuckleY)
+
+        if dy > dx:
+            gesture = "UP" if tipY < knuckleY else "DOWN"
+        else:
+            gesture = "LEFT" if tipX < knuckleX else "RIGHT"  
+
+        return gesture    
+    
     def camera_loop(self, update_callback=None):
         self.cap = cv2.VideoCapture(0)
         
@@ -63,27 +97,13 @@ class HandGestureTracker:
                     if results.multi_hand_landmarks:
                         hand = results.multi_hand_landmarks[0]
 
-                        pointerfinger_id = 8
-                        pointerknuckle_id = 6
-
-                        tipY = hand.landmark[pointerfinger_id].y
-                        tipX = hand.landmark[pointerfinger_id].x
-                        knuckleY = hand.landmark[pointerknuckle_id].y
-                        knuckleX = hand.landmark[pointerknuckle_id].x
-
-                        dx = abs(tipX - knuckleX)
-                        dy = abs(tipY - knuckleY)
-
-                        if dy > dx:
-                            gesture = "UP" if tipY < knuckleY else "DOWN"
-
-                        if dx > dy:
-                            gesture = "LEFT" if tipX < knuckleX else "RIGHT"
+                        if self.is_hand_open(hand):
+                            self.gesture = "OPEN_HAND"
+                        else:
+                            self.gesture = self.gestureClassifier(hand)
                         
                         # Draw landmarks
                         self.mp_draw.draw_landmarks(frame, hand, self.mp_hands.HAND_CONNECTIONS)
-                    
-                    self.gesture = gesture
             
             except Exception as e:
                 print(f"MediaPipe error (ignoring): {e}")
