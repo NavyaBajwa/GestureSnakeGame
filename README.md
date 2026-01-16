@@ -1,4 +1,4 @@
-# Gesture Controlled Snake Game
+# Hand Gesture Controlled Snake Game
 This is a project that I completed in order to introduce myself to computer vision. It's a snake game that is controlled entirely through hand gestures using OpenCV and MediaPipe's hand landmark detection.
 You don't need a keyboard, just start the game with an open-hand gesture and move the snake by pointing your index finger.
 
